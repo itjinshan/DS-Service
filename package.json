@@ -1,0 +1,30 @@
+{
+  "name": "ds-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx tsc && node build/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itjinshan/DS-Service.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/itjinshan/DS-Service/issues"
+  },
+  "homepage": "https://github.com/itjinshan/DS-Service#readme",
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.13.13",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

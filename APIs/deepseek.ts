@@ -3,7 +3,7 @@ var jwt = require('jsonwebtoken');
 var router = express.Router();
 var deepseek = require('../Deepseek/deepseek');
 
-router.get("/", (req: any, res: any) => {
+router.post("/", (req: any, res: any) => {
     const authToken = req.body.token;
     if(authToken) {
         jwt.verify(authToken, process.env.DEEPSEEK_JWT_SECRET, (err: any, decoded: any) => {
@@ -19,7 +19,7 @@ router.get("/", (req: any, res: any) => {
     }
 });
 
-router.get("/plantrip", (req: any, res: any) => {
+router.post("/plantrip", (req: any, res: any) => {
     const authToken = req.body.token;
     if(authToken) {
         jwt.verify(authToken, process.env.DEEPSEEK_JWT_SECRET, (err: any, decoded: any) => {

@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 const bodyParser = require('body-parser');
 require('dotenv').config();
 const app = express();
@@ -8,6 +9,15 @@ const port = process.env.PORT || 8888;
 //
 const rootRouter = require('./APIs');
 const deepseekRouter = require('./APIs/deepseek');
+
+mongoose 
+    .connect(process.env.MONGODB_URI || "")
+    .then(() => {
+        console.log("MongoDB connected");
+    })
+    .catch((err: any) => {
+        console.error("MongoDB connection error:", err);
+    });
 
 // middleware
 //

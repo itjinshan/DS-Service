@@ -1,40 +1,27 @@
-var express = require('express');
-var jwt = require('jsonwebtoken');
-var router = express.Router();
-var deepseek = require('../Deepseek/deepseek');
+import { Router, Request, Response } from 'express';
+import deepseek from '../Deepseek/deepseek';
+import { requireAuth } from '../Utils/auth';
 
-router.post("/", (req: any, res: any) => {
-    const authToken = req.body.token;
-    if(authToken) {
-        jwt.verify(authToken, process.env.DEEPSEEK_JWT_SECRET, (err: any, decoded: any) => {
-            if (err) {
-                res.status(401).send("Unauthorized");
-            } else {
-                res.send("Welcome to DS-Service deepseek API");
-            }
-        });
+const router = Router();
+
+router.post("/", requireAuth, (_req: Request, res: Response) => {
+    res.send("Welcome to DS-Service deepseek API");
+});
+
+router.post("/plantrip", requireAuth, async (req: Request, res: Response) => {
+    const { query } = req.body;
+    if (!query) {
+        res.status(400).send("Missing required field: query");
+        return;
     }
-    else {
-        res.status(401).send("Unauthorized");
+
+    try {
+        const response = await deepseek(query);
+        res.status(200).send(response);
+    } catch (err) {
+        console.error("Error calling deepseek:", err);
+        res.status(502).send("Failed to generate response from deepseek");
     }
 });
 
-router.post("/plantrip", (req: any, res: any) => {
-    const authToken = req.body.token;
-    if(authToken) {
-        jwt.verify(authToken, process.env.DEEPSEEK_JWT_SECRET, (err: any, decoded: any) => {
-            if (err) {
-                res.status(401).send("Unauthorized");
-            } else {
-                deepseek(req.body.query).then((response: any) => {
-                    res.status(200).send(response);
-                });
-            }
-        });
-    }
-    else {
-        res.status(401).send("Unauthorized");
-    }
-});
-
-module.exports = router;
+export default router;

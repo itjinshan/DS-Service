@@ -4,22 +4,28 @@ require('dotenv').config();
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.OPEN_ROUTER_DEEPSEEK_API_KEY,
-//   defaultHeaders: {
-//     "HTTP-Referer": "<YOUR_SITE_URL>", // Optional. Site URL for rankings on openrouter.ai.
-//     "X-Title": "<YOUR_SITE_NAME>", // Optional. Site title for rankings on openrouter.ai.
-//   },
 });
-module.exports = async function main(request: string) {
+
+export interface DeepseekOptions {
+  jsonMode?: boolean;
+}
+
+export default async function deepseek(request: string, options: DeepseekOptions = {}) {
   const completion = await openai.chat.completions.create({
-    model: "deepseek/deepseek-chat-v3-0324:free",
+    model: "deepseek/deepseek-v3.2",
     messages: [
       {
-        "role": "user",
-        "content": request
+        role: "user",
+        content: request
       }
     ],
-    
+    ...(options.jsonMode ? { response_format: { type: "json_object" as const } } : {})
   });
 
-  return completion.choices[0].message;
+  const message = completion.choices[0]?.message;
+  if (!message || !message.content) {
+    throw new Error("Deepseek returned an empty response");
+  }
+
+  return message;
 }

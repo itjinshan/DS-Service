@@ -1,8 +1,9 @@
-var express = require('express');
-var router = express.Router();
+import { Router, Request, Response } from 'express';
 
-router.get("/", (req: any, res: any) => {
+const router = Router();
+
+router.get("/", (_req: Request, res: Response) => {
     res.send("Welcome to DS-Service");
 });
 
-module.exports = router;
+export default router;

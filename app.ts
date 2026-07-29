@@ -1,32 +1,44 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
-const bodyParser = require('body-parser');
 require('dotenv').config();
+
+import rootRouter from './APIs';
+import deepseekRouter from './APIs/deepseek';
+import dataSourcingRouter from './APIs/datasourcing';
+
 const app = express();
 const port = process.env.PORT || 8888;
 
-// routes
-//
-const rootRouter = require('./APIs');
-const deepseekRouter = require('./APIs/deepseek');
-
-mongoose 
-    .connect(process.env.MONGODB_URI || "")
-    .then(() => {
-        console.log("MongoDB connected");
-    })
-    .catch((err: any) => {
-        console.error("MongoDB connection error:", err);
-    });
-
 // middleware
 //
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// routes
+//
 app.use('/', rootRouter);
 app.use('/deepseek', deepseekRouter);
+app.use('/datasourcing', dataSourcingRouter);
 
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
+// error handling
+//
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error(err);
+    res.status(500).send("Internal server error");
 });
+
+async function start() {
+    try {
+        await mongoose.connect(process.env.MONGODB_URI || "");
+        console.log("MongoDB connected");
+    } catch (err) {
+        console.error("MongoDB connection error:", err);
+        process.exit(1);
+    }
+
+    app.listen(port, () => {
+        console.log(`Server is running at http://localhost:${port}`);
+    });
+}
+
+start();

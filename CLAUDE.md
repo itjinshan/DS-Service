@@ -156,3 +156,15 @@ Each `DestinationSpot` (a saved Mongoose document, so also carries the usual `_i
 }
 ```
 Notes for consumers: the list is an **unordered flat list for a single city** — there is no day-by-day/itinerary structure. `City` is a raw ObjectId reference, not populated, so a consumer needing the city/country name back out would need a separate lookup or a `.populate()` change on this endpoint.
+
+## Planned: Lodging Flow (branch: `lodgingFlow`)
+
+TBS is adding an early-in-intake accommodation step to its trip-planning flow (full plan in `TBS/CLAUDE.md`). When the user has no place in mind, TBS needs ranked lodging suggestions for a destination, matched to budget and to where the day's spots end up — this is DS-Service's responsibility, parallel to `sourcespots`.
+
+**Action items (this repo):**
+1. Add `DB_Models/DB_Accommodation.ts` — a Mongoose schema for a sourced lodging option (name, address, city ref, lat/lng, price tier/currency, rating), following the same PascalCase field convention as `DB_DestinationSpot`.
+2. Add `POST /datasourcing/sourceaccommodations` in `APIs/datasourcing.ts`, parallel to `sourcespots`: request body `{ token, ds, city, budget }` (and ideally a list of spot coordinates to bias toward central/convenient locations), same `requireAuth` gate, same LLM-sourcing-then-persist pattern (`Utils/spotMapper.ts`-style parse + save helpers).
+3. Response shape: `{ count: number, accommodations: Accommodation[] }`, mirroring `sourcespots`'s `{ count, spots }` shape.
+4. Once implemented, add a full `## API Contract` entry for this endpoint above (method, params, response shape, auth) — same level of detail as `/datasourcing/sourcespots`.
+
+**Delete this plan when all items are executed and PRs are merged.**

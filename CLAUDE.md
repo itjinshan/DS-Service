@@ -168,3 +168,9 @@ TBS is adding an early-in-intake accommodation step to its trip-planning flow (f
 4. Once implemented, add a full `## API Contract` entry for this endpoint above (method, params, response shape, auth) — same level of detail as `/datasourcing/sourcespots`.
 
 **Delete this plan when all items are executed and PRs are merged.**
+
+## Pending Tasks
+
+Backlog items surfaced while working on other plans, deliberately kept out of the active plan's PR scope. Pick these up as their own future PRs.
+
+- **Network-reachability-based provider routing (TBS-driven).** The `ds: "chatgpt"` case in `POST /datasourcing/sourcespots` (currently a `501` stub) is planned to become real: TBS will select `ds` based on whether the request comes from a mainland-China network, not a per-destination choice — ChatGPT/OpenAI's API is generally unreachable from mainland China regardless of where the trip is to, so China-network requests always get `ds: "deepseek"` and non-China-network requests get `ds: "chatgpt"` (see TBS's `CLAUDE.md`'s "Pending Tasks" section for the full reasoning — the equivalent maps-provider routing there follows the same reachability-first logic, with destination-based refinement only applying within the non-China-network group). When this lands, `sourceaccommodations` (lodging-flow item #2 above) should accept the same `ds` selector and implement both branches together, rather than adding chatgpt support to one endpoint and not the other.

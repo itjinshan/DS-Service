@@ -160,7 +160,7 @@ Notes for consumers: the list is an **unordered flat list for a single city** �
 ---
 
 #### `POST /datasourcing/sourceaccommodations`
-Sources a flat list of lodging options for a city and budget tier from an LLM and persists them to MongoDB. Parallel to `/datasourcing/sourcespots`, added for TBS's lodging-flow "no place in mind" suggestion step (see "Planned: Lodging Flow" below) — **not yet called by TBS**, which still uses a placeholder suggestion stub.
+Sources a flat list of lodging options for a city and budget tier from an LLM and persists them to MongoDB. Parallel to `/datasourcing/sourcespots`, added for TBS's trip-intake "no place in mind" lodging-suggestion step. **Called by TBS** (`Node/APIs/trip.js`'s `suggestAccommodations()`, in the `no_place` branch of its accommodation-intake flow).
 
 **Request body:**
 | field | type | required | notes |
@@ -199,22 +199,10 @@ Each `Accommodation` (a saved Mongoose document, so also carries the usual `_id`
 ```
 Notes for consumers: same shape/behavior as `sourcespots` — an unordered flat list for a single city, `City` is a raw unpopulated ObjectId reference. No live price/nightly-rate field is stored by design (pricing is date/availability-dependent and would go stale immediately) — see this repo's "Pending Tasks" for the caching-layer follow-up if live pricing is added later. Doesn't yet bias results toward central/convenient locations using a trip's already-sourced spot coordinates — that's a documented future enhancement, not implemented in this first pass.
 
-## Planned: Lodging Flow (branch: `lodgingFlow`)
-
-TBS is adding an early-in-intake accommodation step to its trip-planning flow (full plan in `TBS/CLAUDE.md`). When the user has no place in mind, TBS needs ranked lodging suggestions for a destination, matched to budget and to where the day's spots end up — this is DS-Service's responsibility, parallel to `sourcespots`.
-
-**Action items (this repo):**
-1. Add `DB_Models/DB_Accommodation.ts` — a Mongoose schema for a sourced lodging option (name, address, city ref, lat/lng, price tier/currency, rating), following the same PascalCase field convention as `DB_DestinationSpot`.
-2. Add `POST /datasourcing/sourceaccommodations` in `APIs/datasourcing.ts`, parallel to `sourcespots`: request body `{ token, ds, city, budget }` (and ideally a list of spot coordinates to bias toward central/convenient locations), same `requireAuth` gate, same LLM-sourcing-then-persist pattern (`Utils/spotMapper.ts`-style parse + save helpers).
-3. Response shape: `{ count: number, accommodations: Accommodation[] }`, mirroring `sourcespots`'s `{ count, spots }` shape.
-4. Once implemented, add a full `## API Contract` entry for this endpoint above (method, params, response shape, auth) — same level of detail as `/datasourcing/sourcespots`.
-
-**Delete this plan when all items are executed and PRs are merged.**
-
 ## Pending Tasks
 
 Backlog items surfaced while working on other plans, deliberately kept out of the active plan's PR scope. Pick these up as their own future PRs.
 
-- **Network-reachability-based provider routing (TBS-driven).** The `ds: "chatgpt"` case in `POST /datasourcing/sourcespots` (currently a `501` stub) is planned to become real: TBS will select `ds` based on whether the request comes from a mainland-China network, not a per-destination choice — ChatGPT/OpenAI's API is generally unreachable from mainland China regardless of where the trip is to, so China-network requests always get `ds: "deepseek"` and non-China-network requests get `ds: "chatgpt"` (see TBS's `CLAUDE.md`'s "Pending Tasks" section for the full reasoning — the equivalent maps-provider routing there follows the same reachability-first logic, with destination-based refinement only applying within the non-China-network group). When this lands, `sourceaccommodations` (lodging-flow item #2 above) should accept the same `ds` selector and implement both branches together, rather than adding chatgpt support to one endpoint and not the other.
-- **End-to-end test coverage.** `package.json`'s `test` script is currently an unset placeholder (`echo "Error: no test specified" && exit 1`) — no tests exist for any route. Add coverage for `/deepseek/plantrip` and `/datasourcing/sourcespots` (and `/datasourcing/sourceaccommodations` once built) as a starting point, matching the same gap flagged in TBS's `CLAUDE.md`.
-- **Caching layer for volatile external lookups (e.g. Redis).** Decided against persisting a raw price field on sourced accommodations (see TBS's `CLAUDE.md`, lodging-flow item #3) since pricing is date/availability-dependent and goes stale almost immediately — it should be fetched live rather than stored. That means LLM-sourcing calls (and any future live price fetches) will be hit repeatedly by design, so a caching layer with a short TTL is needed in front of them to avoid hammering the LLM API and overloading the DB with re-sourced data. See TBS's `CLAUDE.md` for the matching need on its side (Amap/Google place lookups).
+- **Network-reachability-based provider routing (TBS-driven).** The `ds: "chatgpt"` case in `POST /datasourcing/sourcespots` (currently a `501` stub) is planned to become real: TBS will select `ds` based on whether the request comes from a mainland-China network, not a per-destination choice — ChatGPT/OpenAI's API is generally unreachable from mainland China regardless of where the trip is to, so China-network requests always get `ds: "deepseek"` and non-China-network requests get `ds: "chatgpt"` (see TBS's `CLAUDE.md`'s "Pending Tasks" section for the full reasoning — the equivalent maps-provider routing there follows the same reachability-first logic, with destination-based refinement only applying within the non-China-network group). When this lands, `sourceaccommodations` should accept the same `ds` selector and implement both branches together, rather than adding chatgpt support to one endpoint and not the other.
+- **End-to-end test coverage.** `package.json`'s `test` script is currently an unset placeholder (`echo "Error: no test specified" && exit 1`) — no tests exist for any route. Add coverage for `/deepseek/plantrip`, `/datasourcing/sourcespots`, and `/datasourcing/sourceaccommodations` as a starting point, matching the same gap flagged in TBS's `CLAUDE.md`.
+- **Caching layer for volatile external lookups (e.g. Redis).** Decided against persisting a raw price field on sourced accommodations since pricing is date/availability-dependent and goes stale almost immediately — it should be fetched live rather than stored. That means LLM-sourcing calls (and any future live price fetches) will be hit repeatedly by design, so a caching layer with a short TTL is needed in front of them to avoid hammering the LLM API and overloading the DB with re-sourced data. See TBS's `CLAUDE.md` for the matching need on its side (Amap/Google place lookups).

@@ -157,6 +157,48 @@ Each `DestinationSpot` (a saved Mongoose document, so also carries the usual `_i
 ```
 Notes for consumers: the list is an **unordered flat list for a single city** — there is no day-by-day/itinerary structure. `City` is a raw ObjectId reference, not populated, so a consumer needing the city/country name back out would need a separate lookup or a `.populate()` change on this endpoint.
 
+---
+
+#### `POST /datasourcing/sourceaccommodations`
+Sources a flat list of lodging options for a city and budget tier from an LLM and persists them to MongoDB. Parallel to `/datasourcing/sourcespots`, added for TBS's lodging-flow "no place in mind" suggestion step (see "Planned: Lodging Flow" below) — **not yet called by TBS**, which still uses a placeholder suggestion stub.
+
+**Request body:**
+| field | type | required | notes |
+|---|---|---|---|
+| `token` | string | yes | JWT, see Auth above |
+| `ds` | string | yes | data source selector: `"deepseek"` (implemented) or `"chatgpt"` (not implemented) |
+| `city` | string | yes | city name to source accommodations for |
+| `budget` | string | yes | budget tier to source for (e.g. `"budget"`, `"mid-range"`, `"luxury"`) — not validated against a fixed list, passed straight into the LLM prompt |
+
+- `400` plain text `"Missing required field: city"` if `city` is absent.
+- `400` plain text `"Missing required field: budget"` if `budget` is absent.
+- `400` plain text `"Invalid data source"` if `ds` is anything other than `"deepseek"`/`"chatgpt"`.
+- `501` plain text `"chatgpt data source is not implemented yet"` if `ds === "chatgpt"`.
+- `502` plain text `"Failed to source accommodation data"` if the LLM call, JSON parse, or DB save throws.
+
+**Success response — `200`:**
+```
+{
+  count: number,             // number of accommodations saved
+  accommodations: Accommodation[]
+}
+```
+Each `Accommodation` (a saved Mongoose document, so also carries the usual `_id`/`__v`) has shape:
+```
+{
+  _id: string,
+  Name: string,
+  Address: string,
+  City: ObjectId,              // ref to DestinationCity, NOT populated/expanded
+  Latitude: number,
+  Longitude: number,
+  PriceTier: string,            // "budget" | "mid-range" | "luxury"
+  Currency?: string,
+  Rating: number
+}
+```
+Notes for consumers: same shape/behavior as `sourcespots` — an unordered flat list for a single city, `City` is a raw unpopulated ObjectId reference. No live price/nightly-rate field is stored by design (pricing is date/availability-dependent and would go stale immediately) — see this repo's "Pending Tasks" for the caching-layer follow-up if live pricing is added later. Doesn't yet bias results toward central/convenient locations using a trip's already-sourced spot coordinates — that's a documented future enhancement, not implemented in this first pass.
+
 ## Planned: Lodging Flow (branch: `lodgingFlow`)
 
 TBS is adding an early-in-intake accommodation step to its trip-planning flow (full plan in `TBS/CLAUDE.md`). When the user has no place in mind, TBS needs ranked lodging suggestions for a destination, matched to budget and to where the day's spots end up — this is DS-Service's responsibility, parallel to `sourcespots`.

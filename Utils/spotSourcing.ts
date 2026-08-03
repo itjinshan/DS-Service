@@ -22,20 +22,30 @@ export async function sourceSpotsForCity(city: string, minCount: number): Promis
     const existing: IDestinationSpot[] = cityDoc ? await DestinationSpot.find({ City: cityDoc._id }) : [];
 
     const shortfall = minCount - existing.length;
-    if (shortfall <= 0) {
-        return { spots: existing, newlySourced: 0 };
+    let newlySaved: IDestinationSpot[] = [];
+
+    if (shortfall > 0) {
+        const query = sprintf(DESTINATION_SPOT_QUERY, city, shortfall, shortfall + TOP_UP_PADDING);
+        const llmResponse = await deepseek(query, { jsonMode: true });
+        const rawSpots = parseSpotsResponse(llmResponse.content ?? "");
+
+        // Dedupe against what's already in Mongo before saving — the LLM has no
+        // memory of prior calls for this city, so without this every top-up call
+        // risks re-creating near-identical spot rows.
+        const existingNames = new Set(existing.map(spot => normalizeName(spot.SpotName)));
+        const dedupedRawSpots = rawSpots.filter(raw => !existingNames.has(normalizeName(raw.name)));
+
+        newlySaved = await saveSpots(dedupedRawSpots);
     }
 
-    const query = sprintf(DESTINATION_SPOT_QUERY, city, shortfall, shortfall + TOP_UP_PADDING);
-    const llmResponse = await deepseek(query, { jsonMode: true });
-    const rawSpots = parseSpotsResponse(llmResponse.content ?? "");
+    // Cap the returned list to `minCount`, preferring the highest-rated spots.
+    // Without this, a popular city's ever-growing sourced pool would
+    // eventually return everything ever collected for it — ballooning
+    // response size and, for short trips, cramming every known spot into a
+    // single day instead of a curated subset. `newlySourced` still reports
+    // how many were genuinely created this call, independent of the cap.
+    const combined = existing.concat(newlySaved).sort((a, b) => (b.Rating || 0) - (a.Rating || 0));
+    const spots = combined.slice(0, minCount);
 
-    // Dedupe against what's already in Mongo before saving — the LLM has no
-    // memory of prior calls for this city, so without this every top-up call
-    // risks re-creating near-identical spot rows.
-    const existingNames = new Set(existing.map(spot => normalizeName(spot.SpotName)));
-    const dedupedRawSpots = rawSpots.filter(raw => !existingNames.has(normalizeName(raw.name)));
-
-    const newlySaved = await saveSpots(dedupedRawSpots);
-    return { spots: existing.concat(newlySaved), newlySourced: newlySaved.length };
+    return { spots, newlySourced: newlySaved.length };
 }

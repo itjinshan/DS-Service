@@ -108,7 +108,7 @@ Sources a flat list of points of interest ("spots") for a city and persists them
 | `token` | string | yes | JWT, see Auth above |
 | `ds` | string | yes | data source selector: `"deepseek"` (implemented) or `"chatgpt"` (not implemented) |
 | `city` | string | yes | city name to source spots for |
-| `minCount` | number | no | minimum number of spots wanted for this city; default `15`, clamped to `1`-`40`. If Mongo already has at least this many for the city, no LLM call is made at all. |
+| `minCount` | number | no | target number of spots for this city; default `15`, clamped to `1`-`40`. Acts as both a floor and a cap: if Mongo already has at least this many, no LLM call is made and the response is capped to the `minCount` highest-rated ones (not the entire accumulated pool) rather than growing unbounded as a popular city gets sourced repeatedly. |
 
 - `400` plain text `"Missing required field: city"` if `city` is absent.
 - `400` plain text `"Invalid data source"` if `ds` is anything other than `"deepseek"`/`"chatgpt"`.

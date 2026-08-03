@@ -5,6 +5,7 @@ require('dotenv').config();
 import rootRouter from './APIs';
 import deepseekRouter from './APIs/deepseek';
 import dataSourcingRouter from './APIs/datasourcing';
+import nluRouter from './APIs/nlu';
 
 const app = express();
 const port = process.env.PORT || 8888;
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/', rootRouter);
 app.use('/deepseek', deepseekRouter);
 app.use('/datasourcing', dataSourcingRouter);
+app.use('/nlu', nluRouter);
 
 // error handling
 //

@@ -1,10 +1,22 @@
 import { Router, Request, Response } from 'express';
 import { sprintf } from 'sprintf-js';
 import deepseek from '../Deepseek/deepseek';
-import { DESTINATION_SPOT_QUERY, DESTINATION_ACCOMMODATION_QUERY } from '../Utils/queryScripts';
-import { parseSpotsResponse, saveSpots } from '../Utils/spotMapper';
+import { DESTINATION_ACCOMMODATION_QUERY } from '../Utils/queryScripts';
 import { parseAccommodationsResponse, saveAccommodations } from '../Utils/accommodationMapper';
+import { sourceSpotsForCity } from '../Utils/spotSourcing';
 import { requireAuth } from '../Utils/auth';
+
+const DEFAULT_MIN_SPOT_COUNT = 15;
+const MIN_SPOT_COUNT_FLOOR = 1;
+const MIN_SPOT_COUNT_CEILING = 40;
+
+function clampMinCount(rawMinCount: unknown): number {
+    const parsed = Number(rawMinCount);
+    if (!Number.isFinite(parsed)) {
+        return DEFAULT_MIN_SPOT_COUNT;
+    }
+    return Math.min(MIN_SPOT_COUNT_CEILING, Math.max(MIN_SPOT_COUNT_FLOOR, Math.round(parsed)));
+}
 
 const router = Router();
 
@@ -13,7 +25,7 @@ router.post("/", requireAuth, (_req: Request, res: Response) => {
 });
 
 router.post("/sourcespots", requireAuth, async (req: Request, res: Response) => {
-    const { ds, city } = req.body;
+    const { ds, city, minCount } = req.body;
     if (!city) {
         res.status(400).send("Missing required field: city");
         return;
@@ -22,11 +34,8 @@ router.post("/sourcespots", requireAuth, async (req: Request, res: Response) => 
     switch (ds) {
         case "deepseek": {
             try {
-                const spotsFetchingQuery = sprintf(DESTINATION_SPOT_QUERY, city);
-                const llmResponse = await deepseek(spotsFetchingQuery, { jsonMode: true });
-                const rawSpots = parseSpotsResponse(llmResponse.content ?? "");
-                const savedSpots = await saveSpots(rawSpots);
-                res.status(200).json({ count: savedSpots.length, spots: savedSpots });
+                const { spots, newlySourced } = await sourceSpotsForCity(city, clampMinCount(minCount));
+                res.status(200).json({ count: spots.length, newlySourced, spots });
             } catch (err) {
                 console.error("Error sourcing spots from deepseek:", err);
                 res.status(502).send("Failed to source spot data");

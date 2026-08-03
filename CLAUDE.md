@@ -26,11 +26,14 @@ Run these from the `DS-Service/` directory.
 ## Folder structure
 
 - `app.ts` — Express app entry point: middleware, route mounting, Mongo connection, error handler.
-- `APIs/` — Express routers, one file per route group (`index.ts` root, `deepseek.ts`, `datasourcing.ts`).
+- `APIs/` — Express routers, one file per route group (`index.ts` root, `deepseek.ts`, `datasourcing.ts`, `nlu.ts`).
 - `Deepseek/deepseek.ts` — thin wrapper around the OpenAI SDK client pointed at OpenRouter; returns the raw chat `message` object.
 - `Utils/auth.ts` — `requireAuth` middleware; verifies a JWT passed in the request **body** (not a header).
-- `Utils/queryScripts.ts` — prompt templates (e.g. `DESTINATION_SPOT_QUERY`) used to query the LLM.
+- `Utils/queryScripts.ts` — prompt templates (e.g. `DESTINATION_SPOT_QUERY`) used to query the LLM, plus `buildNluExtractionQuery()`, a plain function (not a fixed template) since `/nlu/extract`'s field list is dynamic per call.
 - `Utils/spotMapper.ts` — parses/validates the LLM's JSON response into `RawSpot[]` and persists it via `saveSpots()`, which upserts `DestinationCountry` → `DestinationCity` → `DestinationSpot` in that order (spot sourcing is the only path that currently writes country/city records, and it only ever populates the name — the rest of those records stay blank until curated by hand).
+- `Utils/spotSourcing.ts` — `sourceSpotsForCity()`, the DB-first-then-LLM-top-up orchestrator behind `/datasourcing/sourcespots`; checks Mongo for existing spots before ever calling the LLM.
+- `Utils/cityLookup.ts` — `findOrCreateCity()`/`findOrCreateCountry()` (case-insensitive lookup, create-on-miss) and `findCityByName()` (read-only, no create — used by `spotSourcing.ts`'s DB-first check, which doesn't have a country name to create with until the LLM responds).
+- `Utils/nluMapper.ts` — parses/validates `/nlu/extract`'s LLM JSON response against the requested field list.
 - `DB_Models/` — Mongoose schemas: `DB_DestinationCountry.ts`, `DB_DestinationCity.ts`, `DB_DestinationSpot.ts`. Field names are PascalCase (e.g. `CityName`, `CountryIn`) — this is a deliberate project convention, not TypeScript convention.
 - `build/` — compiled JS output (generated, do not edit).
 
@@ -39,7 +42,7 @@ Run these from the `DS-Service/` directory.
 - DB model fields are PascalCase; TS interfaces are prefixed `I` (`IDestinationSpot`, `IFees`, etc.).
 - Every mutating/LLM-backed route is protected by `requireAuth`, which expects `{ token }` in the JSON body — there is no `Authorization` header convention here.
 - Routes return plain-text via `res.send()` for simple/error cases and `res.status(x).json(...)` for structured payloads — the codebase mixes both, so match whichever the specific route already does when adding a sibling route.
-- LLM-facing routes (`/deepseek/plantrip`, `/datasourcing/sourcespots`) are the only ones implemented so far; `chatgpt` as a data source in `/datasourcing/sourcespots` is a recognized-but-unimplemented case (returns 501).
+- LLM-facing routes (`/deepseek/plantrip`, `/datasourcing/sourcespots`, `/datasourcing/sourceaccommodations`, `/nlu/extract`) are the only ones implemented so far; `chatgpt` as a data source is a recognized-but-unimplemented case across all of them (returns 501).
 
 ## API Contract
 
@@ -97,7 +100,7 @@ There is no additional shaping/parsing of this response — TBS receives the LLM
 ---
 
 #### `POST /datasourcing/sourcespots`
-Sources a flat list of points of interest ("spots") for a city from an LLM and persists them to MongoDB. **Not yet called by TBS** — TBS's `Services/mockItinerary.js` currently fakes this step, with a comment pointing back at this endpoint as the eventual real integration point.
+Sources a flat list of points of interest ("spots") for a city and persists them to MongoDB. **DB-first, LLM-top-up**: checks Mongo for spots already sourced for this city before ever calling the LLM, and only asks the LLM for however many more are needed to reach `minCount` — repeat calls for the same city are cheap and don't create duplicate rows (see `Utils/spotSourcing.ts`).
 
 **Request body:**
 | field | type | required | notes |
@@ -105,6 +108,7 @@ Sources a flat list of points of interest ("spots") for a city from an LLM and p
 | `token` | string | yes | JWT, see Auth above |
 | `ds` | string | yes | data source selector: `"deepseek"` (implemented) or `"chatgpt"` (not implemented) |
 | `city` | string | yes | city name to source spots for |
+| `minCount` | number | no | minimum number of spots wanted for this city; default `15`, clamped to `1`-`40`. If Mongo already has at least this many for the city, no LLM call is made at all. |
 
 - `400` plain text `"Missing required field: city"` if `city` is absent.
 - `400` plain text `"Invalid data source"` if `ds` is anything other than `"deepseek"`/`"chatgpt"`.
@@ -114,7 +118,8 @@ Sources a flat list of points of interest ("spots") for a city from an LLM and p
 **Success response — `200`:**
 ```
 {
-  count: number,       // number of spots saved
+  count: number,        // total spots for the city returned this call (existing + newly sourced)
+  newlySourced: number,  // how many of those were newly created by this call (0 if the existing pool already met minCount)
   spots: DestinationSpot[]
 }
 ```
@@ -198,6 +203,42 @@ Each `Accommodation` (a saved Mongoose document, so also carries the usual `_id`
 }
 ```
 Notes for consumers: same shape/behavior as `sourcespots` — an unordered flat list for a single city, `City` is a raw unpopulated ObjectId reference. No live price/nightly-rate field is stored by design (pricing is date/availability-dependent and would go stale immediately) — see this repo's "Pending Tasks" for the caching-layer follow-up if live pricing is added later. Doesn't yet bias results toward central/convenient locations using a trip's already-sourced spot coordinates — that's a documented future enhancement, not implemented in this first pass.
+
+---
+
+#### `POST /nlu/`
+- Welcome check for the NLU sub-router. Requires auth. Response: `200`, plain text `"Welcome to DS-Service NLU API"`.
+
+---
+
+#### `POST /nlu/extract`
+Narrow, structured field extraction from a single chat message — replaces regex/keyword-based message parsing with a real LLM call. Not persisted anywhere (no DB writes). **Called by TBS** (`Node/Services/nluExtraction.js`, replacing the old `extractDestination`/`extractOtherPrefs`/`extractYesNo` regex functions in `Node/APIs/trip.js`).
+
+**Request body:**
+| field | type | required | notes |
+|---|---|---|---|
+| `token` | string | yes | JWT, see Auth above |
+| `ds` | string | yes | data source selector: `"deepseek"` (implemented) or `"chatgpt"` (not implemented) |
+| `message` | string | yes | the traveler's chat message to extract fields from |
+| `fields` | string[] | yes | which fields to extract — must each be one of `destination`, `duration`, `numOfTravelers`, `budget`, `yesno` |
+| `context` | string | no | optional freeform hint about what's being asked, e.g. "whether the traveler already has accommodation booked" — most useful for `yesno`, which otherwise has no way to know what a bare "yes"/"no" is answering |
+
+- `400` plain text `"Missing required field: message"` if `message` is absent.
+- `400` plain text `"Missing required field: fields"` if `fields` is absent or empty.
+- `400` plain text `"Invalid field: <name>"` if any entry in `fields` isn't one of the fixed vocabulary above.
+- `400` plain text `"Invalid data source"` if `ds` is anything other than `"deepseek"`/`"chatgpt"`.
+- `501` plain text `"chatgpt data source is not implemented yet"` if `ds === "chatgpt"`.
+- `502` plain text `"Failed to extract fields"` if the LLM call or JSON parse throws.
+
+**Success response — `200`:**
+```
+{
+  extracted: {
+    [field]: string | number | null   // one entry per requested field, null if not present/determinable in the message
+  }
+}
+```
+Only the fields listed in the request's `fields` array are present in `extracted` — e.g. requesting `["destination"]` returns `{ extracted: { destination: "Tokyo" } }` or `{ extracted: { destination: null } }`, never the other four fields.
 
 ## Pending Tasks
 

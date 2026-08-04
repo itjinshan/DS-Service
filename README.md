@@ -9,7 +9,7 @@ It is currently consumed by [TBS (Travel Buddy Service)](https://github.com/itji
 - **Trip planning** — accepts a freeform natural-language travel query and returns an LLM-generated response.
 - **Spot sourcing** — given a city name, sources points of interest (name, location, fees, best time to visit, category, etc.), checking its own MongoDB for spots already sourced for that city before asking the LLM for more — see ["How Spot Sourcing Works"](#how-spot-sourcing-works) below.
 - **Accommodation sourcing** — given a city and budget tier, sources lodging options the same way.
-- **NLU extraction** — given a chat message and a list of fields to pull out (destination, duration, traveler count, budget tier, yes/no), asks the LLM to extract exactly those fields as structured JSON — see ["How NLU Extraction Works"](#how-nlu-extraction-works) below.
+- **NLU extraction** — given a chat message and a list of fields to pull out (destination, duration, traveler count, budget tier, vacation pace, yes/no), asks the LLM to extract exactly those fields as structured JSON — see ["How NLU Extraction Works"](#how-nlu-extraction-works) below.
 
 ## Tech stack
 
@@ -94,7 +94,7 @@ This means the first request for a city pays the full LLM cost, but every subseq
 
 ## How NLU Extraction Works
 
-`POST /nlu/extract` takes a chat message and a list of fields to pull out of it (`destination`, `duration`, `numOfTravelers`, `budget`, or `yesno`), and asks the LLM to return exactly those fields as a JSON object — nothing else, no explanation, `null` for anything genuinely not present in the message.
+`POST /nlu/extract` takes a chat message and a list of fields to pull out of it (`destination`, `duration`, `numOfTravelers`, `budget`, `pace`, or `yesno`), and asks the LLM to return exactly those fields as a JSON object — nothing else, no explanation, `null` for anything genuinely not present in the message.
 
 This exists so a consuming app's conversational intake flow doesn't have to rely on regex/keyword matching to understand what a user said. The optional `context` field matters most for `yesno`: a bare "yes" or "no" has no meaning on its own, so the caller passes a short hint (e.g. "whether the traveler already has a place to stay booked") so the LLM knows what it's confirming or denying.
 

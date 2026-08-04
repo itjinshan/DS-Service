@@ -223,7 +223,7 @@ Narrow, structured field extraction from a single chat message — replaces rege
 | `token` | string | yes | JWT, see Auth above |
 | `ds` | string | yes | data source selector: `"deepseek"` (implemented) or `"chatgpt"` (not implemented) |
 | `message` | string | yes | the traveler's chat message to extract fields from |
-| `fields` | string[] | yes | which fields to extract — must each be one of `destination`, `duration`, `numOfTravelers`, `budget`, `yesno` |
+| `fields` | string[] | yes | which fields to extract — must each be one of `destination`, `duration`, `numOfTravelers`, `budget`, `pace`, `yesno` |
 | `context` | string | no | optional freeform hint about what's being asked, e.g. "whether the traveler already has accommodation booked" — most useful for `yesno`, which otherwise has no way to know what a bare "yes"/"no" is answering |
 
 - `400` plain text `"Missing required field: message"` if `message` is absent.
@@ -241,7 +241,7 @@ Narrow, structured field extraction from a single chat message — replaces rege
   }
 }
 ```
-Only the fields listed in the request's `fields` array are present in `extracted` — e.g. requesting `["destination"]` returns `{ extracted: { destination: "Tokyo" } }` or `{ extracted: { destination: null } }`, never the other four fields.
+Only the fields listed in the request's `fields` array are present in `extracted` — e.g. requesting `["destination"]` returns `{ extracted: { destination: "Tokyo" } }` or `{ extracted: { destination: null } }`, never the other five fields.
 
 ## Pending Tasks
 

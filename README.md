@@ -7,7 +7,7 @@ It is currently consumed by [TBS (Travel Buddy Service)](https://github.com/itji
 ## What it does
 
 - **Trip planning** — accepts a freeform natural-language travel query and returns an LLM-generated response.
-- **Spot sourcing** — given a city name, sources points of interest (name, location, fees, best time to visit, etc.), checking its own MongoDB for spots already sourced for that city before asking the LLM for more — see ["How Spot Sourcing Works"](#how-spot-sourcing-works) below.
+- **Spot sourcing** — given a city name, sources points of interest (name, location, fees, best time to visit, category, etc.), checking its own MongoDB for spots already sourced for that city before asking the LLM for more — see ["How Spot Sourcing Works"](#how-spot-sourcing-works) below.
 - **Accommodation sourcing** — given a city and budget tier, sources lodging options the same way.
 - **NLU extraction** — given a chat message and a list of fields to pull out (destination, duration, traveler count, budget tier, yes/no), asks the LLM to extract exactly those fields as structured JSON — see ["How NLU Extraction Works"](#how-nlu-extraction-works) below.
 

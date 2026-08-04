@@ -157,10 +157,11 @@ Each `DestinationSpot` (a saved Mongoose document, so also carries the usual `_i
     Vehicle?: number,
     Notes?: string
   },
-  Rating: number
+  Rating: number,
+  Category?: "museum" | "historical" | "religious" | "park" | "landmark" | "food" | "shopping" | "nightlife" | "entertainment"
 }
 ```
-Notes for consumers: the list is an **unordered flat list for a single city** — there is no day-by-day/itinerary structure. `City` is a raw ObjectId reference, not populated, so a consumer needing the city/country name back out would need a separate lookup or a `.populate()` change on this endpoint.
+Notes for consumers: the list is an **unordered flat list for a single city** — there is no day-by-day/itinerary structure. `City` is a raw ObjectId reference, not populated, so a consumer needing the city/country name back out would need a separate lookup or a `.populate()` change on this endpoint. `Category` is absent (`undefined`) on any spot sourced before this field existed, or on the rare LLM response that didn't return a value from the fixed vocabulary (`Utils/spotMapper.ts` normalizes and drops anything else rather than saving a garbage value) — consumers should treat a missing `Category` as "uncategorized," not an error.
 
 **Known limitation:** `saveSpots()` resolves each spot's `City` from the LLM's own per-spot `city` field, not from the requested `city` — so a nearby-but-administratively-distinct landmark (e.g. Lisbon's Cristo Rei, across the river in Almada) can get filed under a different `DestinationCity` than the one requested. Confirmed in testing: this doesn't affect what a consumer sees (TBS's `spotSourcing.js` overwrites `City` to the requested destination string on its side regardless), but it means the DB-first check in `sourceSpotsForCity()` can slightly undercount a city's existing pool, occasionally triggering an LLM top-up call that wasn't strictly necessary. Minor inefficiency, not a correctness bug — not worth the complexity of a geographic-radius lookup to fully close.
 

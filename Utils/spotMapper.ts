@@ -1,5 +1,19 @@
-import DestinationSpot, { IDestinationSpot } from '../DB_Models/DB_DestinationSpot';
+import DestinationSpot, { IDestinationSpot, SPOT_CATEGORIES, SpotCategory } from '../DB_Models/DB_DestinationSpot';
 import { findOrCreateCity } from './cityLookup';
+
+const CATEGORY_SET = new Set<string>(SPOT_CATEGORIES);
+
+// The LLM is asked for one of SPOT_CATEGORIES but isn't guaranteed to
+// comply exactly (casing, a synonym, occasional drift) — normalize and fall
+// back to undefined (treated as "uncategorized" downstream) rather than
+// letting an unrecognized value either corrupt the field or, if this were a
+// Mongoose-level enum, throw and abort saving the entire batch of spots
+// over one bad category.
+function normalizeCategory(raw: unknown): SpotCategory | undefined {
+    if (typeof raw !== 'string') return undefined;
+    const normalized = raw.trim().toLowerCase();
+    return CATEGORY_SET.has(normalized) ? (normalized as SpotCategory) : undefined;
+}
 
 interface RawFees {
     currency?: string | null;
@@ -41,6 +55,7 @@ export interface RawSpot {
     averageTimeSpent: RawVisitDuration;
     fees?: RawFees;
     rating: number;
+    category?: string;
 }
 
 export function parseSpotsResponse(content: string): RawSpot[] {
@@ -95,7 +110,8 @@ export async function saveSpots(rawSpots: RawSpot[]): Promise<IDestinationSpot[]
                 Vehicle: raw.fees?.vehicle ?? undefined,
                 Notes: raw.fees?.notes ?? undefined
             },
-            Rating: raw.rating
+            Rating: raw.rating,
+            Category: normalizeCategory(raw.category)
         });
         saved.push(spot);
     }

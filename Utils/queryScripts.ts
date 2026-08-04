@@ -1,3 +1,7 @@
+import { SPOT_CATEGORIES } from '../DB_Models/DB_DestinationSpot';
+
+const SPOT_CATEGORY_LIST = SPOT_CATEGORIES.map(c => `"${c}"`).join(' or ');
+
 export const DESTINATION_SPOT_QUERY = `List the must-visit spots in %s.
 Respond with ONLY a single JSON object (no markdown fences, no commentary) matching exactly this shape:
 
@@ -15,7 +19,8 @@ Respond with ONLY a single JSON object (no markdown fences, no commentary) match
       "bestTimeToVisitInYear": { "description": string, "months": string[] },
       "averageTimeSpent": { "description": string, "minMinutes": number or null, "maxMinutes": number or null },
       "fees": { "currency": string or null, "adult": number or null, "senior": number or null, "child": number or null, "parking": number or null, "vehicle": number or null, "notes": string or null },
-      "rating": number
+      "rating": number,
+      "category": one of ${SPOT_CATEGORY_LIST} — pick whichever single category best describes the spot
     }
   ]
 }

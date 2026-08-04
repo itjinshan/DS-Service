@@ -1,5 +1,26 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
+// Fixed vocabulary for spot categorization — used to build the LLM sourcing
+// prompt (Utils/queryScripts.ts) and to bias day-arrangement toward a varied
+// mix on the consuming side (TBS's Services/itineraryPlanner.js). Kept as a
+// plain string field below rather than a Mongoose-level enum: an
+// LLM-returned value outside this list is normalized/dropped in
+// Utils/spotMapper.ts rather than throwing and aborting the whole sourcing
+// call over one spot's category.
+export const SPOT_CATEGORIES = [
+    "museum",
+    "historical",
+    "religious",
+    "park",
+    "landmark",
+    "food",
+    "shopping",
+    "nightlife",
+    "entertainment"
+] as const;
+
+export type SpotCategory = typeof SPOT_CATEGORIES[number];
+
 export interface IFees {
     Currency?: string;
     Adult?: number;
@@ -40,6 +61,7 @@ export interface IDestinationSpot extends Document {
     AverageTimeSpent: IVisitDuration;
     Fees: IFees;
     Rating: number;
+    Category?: SpotCategory;
 }
 
 const FeesSchema = new Schema<IFees>({
@@ -118,6 +140,11 @@ const DestinationSpotSchema = new Schema<IDestinationSpot>({
     Rating: {
         type: Number,
         required: true
+    },
+    // Optional (not required) so spots sourced before this field existed
+    // remain valid — see SPOT_CATEGORIES above for the vocabulary.
+    Category: {
+        type: String
     }
 });
 

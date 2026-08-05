@@ -56,6 +56,7 @@ const NLU_FIELD_DEFINITIONS: Record<string, string> = {
     duration: '"duration": number or null   // trip length in days, as an integer; null if not mentioned',
     numOfTravelers: '"numOfTravelers": number or null   // number of people traveling, as an integer; null if not mentioned',
     budget: '"budget": "budget" or "mid-range" or "luxury" or null   // the traveler\'s budget tier; null if not mentioned',
+    pace: '"pace": "relaxed" or "standard" or "packed" or null   // how full the traveler wants each day\'s itinerary to be; null if not mentioned',
     yesno: '"yesno": "yes" or "no" or null   // whether the traveler answered affirmatively or negatively; null if unclear'
 };
 

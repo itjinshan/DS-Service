@@ -4,7 +4,7 @@ import { buildNluExtractionQuery } from '../Utils/queryScripts';
 import { parseExtractionResponse } from '../Utils/nluMapper';
 import { requireAuth } from '../Utils/auth';
 
-const VALID_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget', 'pace', 'yesno'];
+const VALID_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'yesno'];
 
 const router = Router();
 

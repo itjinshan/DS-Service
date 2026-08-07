@@ -1,5 +1,5 @@
 import DestinationSpot, { IDestinationSpot, SPOT_CATEGORIES, SpotCategory } from '../DB_Models/DB_DestinationSpot';
-import { findOrCreateCity } from './cityLookup';
+import { findOrCreateCity } from '../Utils/cityLookup';
 
 const CATEGORY_SET = new Set<string>(SPOT_CATEGORIES);
 

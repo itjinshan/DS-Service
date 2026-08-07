@@ -5,7 +5,7 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 // mix on the consuming side (TBS's Services/itineraryPlanner.js). Kept as a
 // plain string field below rather than a Mongoose-level enum: an
 // LLM-returned value outside this list is normalized/dropped in
-// Utils/spotMapper.ts rather than throwing and aborting the whole sourcing
+// mappers/spotMapper.ts rather than throwing and aborting the whole sourcing
 // call over one spot's category.
 export const SPOT_CATEGORIES = [
     "museum",

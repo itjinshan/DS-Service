@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { sprintf } from 'sprintf-js';
 import deepseek from '../Deepseek/deepseek';
 import { DESTINATION_ACCOMMODATION_QUERY } from '../Utils/queryScripts';
-import { parseAccommodationsResponse, saveAccommodations } from '../Utils/accommodationMapper';
+import { parseAccommodationsResponse, saveAccommodations } from '../mappers/accommodationMapper';
 import { sourceSpotsForCity } from '../Utils/spotSourcing';
 import { requireAuth } from '../Utils/auth';
 

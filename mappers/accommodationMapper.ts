@@ -1,5 +1,5 @@
 import Accommodation, { IAccommodation } from '../DB_Models/DB_Accommodation';
-import { findOrCreateCity } from './cityLookup';
+import { findOrCreateCity } from '../Utils/cityLookup';
 
 export interface RawAccommodation {
     name: string;

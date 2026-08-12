@@ -3,7 +3,7 @@ import DestinationSpot, { IDestinationSpot } from '../DB_Models/DB_DestinationSp
 import { findCityByName } from './cityLookup';
 import deepseek from '../Deepseek/deepseek';
 import { DESTINATION_SPOT_QUERY } from './queryScripts';
-import { parseSpotsResponse, saveSpots } from './spotMapper';
+import { parseSpotsResponse, saveSpots } from '../mappers/spotMapper';
 
 // How far past the shortfall to ask the LLM for, since it won't return
 // exactly the number requested.

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import deepseek from '../Deepseek/deepseek';
 import { buildNluExtractionQuery } from '../Utils/queryScripts';
-import { parseExtractionResponse } from '../Utils/nluMapper';
+import { parseExtractionResponse } from '../mappers/nluMapper';
 import { requireAuth } from '../Utils/auth';
 
 const VALID_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint', 'yesno'];

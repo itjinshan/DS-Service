@@ -60,7 +60,10 @@ const NLU_FIELD_DEFINITIONS: Record<string, string> = {
     transportMode: '"transportMode": "walking" or "public_transit" or "taxi" or "driving" or null   // how the traveler plans to get around the destination; null if not mentioned',
     arrivalPoint: '"arrivalPoint": string or null   // the named place (airport, train station, port, etc.) the traveler said they\'re arriving at/through/via; null if none is mentioned',
     departurePoint: '"departurePoint": string or null   // the named place (airport, train station, port, etc.) the traveler said they\'re departing from/via at the end of the trip; null if none is mentioned',
-    yesno: '"yesno": "yes" or "no" or null   // whether the traveler answered affirmatively or negatively; null if unclear'
+    yesno: '"yesno": "yes" or "no" or null   // whether the traveler answered affirmatively or negatively; null if unclear',
+    dayNumber: '"dayNumber": number or null   // the 1-based day number (Day 1, Day 2, etc.) the traveler is referring to; null if not mentioned',
+    targetSpotHint: '"targetSpotHint": string or null   // a short description of which spot on that day the traveler wants replaced — its name, or a description like "the museum" or "the second stop"; null if not mentioned',
+    replacementCategory: `"replacementCategory": ${SPOT_CATEGORY_LIST} or null   // the category of spot the traveler wants instead, mapped to the closest matching option even if they used different wording (e.g. "somewhere outdoorsy" -> "park"); null if the traveler didn't express a preference`
 };
 
 export function buildNluExtractionQuery(message: string, fields: string[], context?: string): string {

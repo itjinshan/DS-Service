@@ -3,7 +3,8 @@ import DestinationSpot, { IDestinationSpot } from '../DB_Models/DB_DestinationSp
 import { findCityByName } from './cityLookup';
 import deepseek from '../Deepseek/deepseek';
 import { DESTINATION_SPOT_QUERY } from './queryScripts';
-import { parseSpotsResponse, saveSpots } from '../mappers/spotMapper';
+import { parseSpotsResponse, saveSpots, RawSpot } from '../mappers/spotMapper';
+import { isLikelyDuplicate, NamedPoint } from './spotDedup';
 
 // How far past the shortfall to ask the LLM for, since it won't return
 // exactly the number requested.
@@ -11,6 +12,22 @@ const TOP_UP_PADDING = 10;
 
 function normalizeName(name: string) {
     return (name || '').trim().toLowerCase();
+}
+
+// RawSpot (LLM/mapper-facing) and IDestinationSpot (the Mongoose doc) use
+// different field casing for the same data (camelCase vs PascalCase, per
+// this repo's documented convention — see CLAUDE.md's "Conventions"), so
+// they need separate coordinate extractors rather than one shared shape.
+function rawSpotPoint(raw: RawSpot): NamedPoint | null {
+    return typeof raw.latitude === 'number' && typeof raw.longitude === 'number'
+        ? { name: raw.name, lat: raw.latitude, lng: raw.longitude }
+        : null;
+}
+
+function savedSpotPoint(spot: IDestinationSpot): NamedPoint | null {
+    return typeof spot.Latitude === 'number' && typeof spot.Longitude === 'number'
+        ? { name: spot.SpotName, lat: spot.Latitude, lng: spot.Longitude }
+        : null;
 }
 
 // DB-first, LLM-top-up: check Mongo for spots already sourced for this city
@@ -31,9 +48,25 @@ export async function sourceSpotsForCity(city: string, minCount: number): Promis
 
         // Dedupe against what's already in Mongo before saving — the LLM has no
         // memory of prior calls for this city, so without this every top-up call
-        // risks re-creating near-identical spot rows.
+        // risks re-creating near-identical spot rows. Two checks, since either
+        // alone has a real gap: exact-name match misses reworded duplicates,
+        // and proximity alone flags unrelated nearby spots as duplicates too
+        // eagerly — see spotDedup.ts's isLikelyDuplicate() for both examples.
+        // Checked against `existing` AND against spots already accepted earlier
+        // in this same batch, so one LLM response naming the same place twice
+        // doesn't save it twice either.
         const existingNames = new Set(existing.map(spot => normalizeName(spot.SpotName)));
-        const dedupedRawSpots = rawSpots.filter(raw => !existingNames.has(normalizeName(raw.name)));
+        const existingPoints = existing.map(savedSpotPoint).filter((p): p is NamedPoint => p !== null);
+
+        const dedupedRawSpots: RawSpot[] = [];
+        const acceptedPoints: NamedPoint[] = [];
+        for (const raw of rawSpots) {
+            if (existingNames.has(normalizeName(raw.name))) continue;
+            const point = rawSpotPoint(raw);
+            if (point && existingPoints.concat(acceptedPoints).some(known => isLikelyDuplicate(known, point))) continue;
+            dedupedRawSpots.push(raw);
+            if (point) acceptedPoints.push(point);
+        }
 
         newlySaved = await saveSpots(dedupedRawSpots);
     }

@@ -9,15 +9,17 @@ Respond with ONLY a single JSON object (no markdown fences, no commentary) match
   "spots": [
     {
       "name": string,
+      "nameZh": string — Chinese name for the same spot (the real Chinese name if one is commonly used, otherwise a natural Chinese translation; not pinyin),
       "streetAddress": string,
+      "streetAddressZh": string — Chinese version of the address,
       "city": string,
       "stateOrProvince": string,
       "country": string,
       "latitude": number,
       "longitude": number,
-      "bestTimeToVisitInDay": { "description": string, "startTime": string or null (24h "HH:mm"), "endTime": string or null },
+      "bestTimeToVisitInDay": { "description": string, "descriptionZh": string — Chinese translation of description, "startTime": string or null (24h "HH:mm"), "endTime": string or null },
       "bestTimeToVisitInYear": { "description": string, "months": string[] },
-      "averageTimeSpent": { "description": string, "minMinutes": number or null, "maxMinutes": number or null },
+      "averageTimeSpent": { "description": string, "descriptionZh": string — Chinese translation of description, "minMinutes": number or null, "maxMinutes": number or null },
       "fees": { "currency": string or null, "adult": number or null, "senior": number or null, "child": number or null, "parking": number or null, "vehicle": number or null, "notes": string or null },
       "rating": number,
       "category": one of ${SPOT_CATEGORY_LIST} — pick whichever single category best describes the spot

@@ -130,7 +130,9 @@ Each `DestinationSpot` (a saved Mongoose document, so also carries the usual `_i
 {
   _id: string,
   SpotName: string,
+  SpotNameZh?: string,          // Chinese name, sourced in the same LLM call — see "Bilingual spot content" below
   StreetAddress: string,
+  StreetAddressZh?: string,
   City: ObjectId,              // ref to DestinationCity, NOT populated/expanded
   StateOrProvince: string,
   Country: string,              // plain country name string, separate from the City ref chain
@@ -138,6 +140,7 @@ Each `DestinationSpot` (a saved Mongoose document, so also carries the usual `_i
   Longitude: number,
   BestTimeToVisitInDay: {
     Description: string,
+    DescriptionZh?: string,
     StartTime?: string,
     EndTime?: string
   },
@@ -147,6 +150,7 @@ Each `DestinationSpot` (a saved Mongoose document, so also carries the usual `_i
   },
   AverageTimeSpent: {
     Description: string,
+    DescriptionZh?: string,
     MinMinutes?: number,
     MaxMinutes?: number
   },
@@ -163,6 +167,8 @@ Each `DestinationSpot` (a saved Mongoose document, so also carries the usual `_i
   Category?: "museum" | "historical" | "religious" | "park" | "landmark" | "food" | "shopping" | "nightlife" | "entertainment"
 }
 ```
+**Bilingual spot content:** `SpotNameZh`/`StreetAddressZh`/`BestTimeToVisitInDay.DescriptionZh`/`AverageTimeSpent.DescriptionZh` are the Chinese counterparts of `SpotName`/`StreetAddress`/`BestTimeToVisitInDay.Description`/`AverageTimeSpent.Description`, sourced together in the same LLM call as the English fields (`Utils/queryScripts.ts`'s `DESTINATION_SPOT_QUERY`) — not a separate translation pass or endpoint. Only these four fields have a `Zh` counterpart, since they're the only spot text TBS's Itinerary page actually displays (`BestTimeToVisitInYear`/`Fees.Notes` aren't shown in the UI, so weren't worth translating). Added for TBS's Chinese-first-launch intake (see TBS's `CLAUDE.md`'s Backlog, "Default trip intake to Chinese"). Like `Category`, absent (`undefined`) on any spot sourced before this field existed — not backfilled — so consumers should fall back to the English field when the `Zh` one is missing, same "uncategorized"-style graceful degradation as `Category`.
+
 Notes for consumers: the list is an **unordered flat list for a single city** — there is no day-by-day/itinerary structure. `City` is a raw ObjectId reference, not populated, so a consumer needing the city/country name back out would need a separate lookup or a `.populate()` change on this endpoint. `Category` is absent (`undefined`) on any spot sourced before this field existed, or on the rare LLM response that didn't return a value from the fixed vocabulary (`mappers/spotMapper.ts` normalizes and drops anything else rather than saving a garbage value) — consumers should treat a missing `Category` as "uncategorized," not an error.
 
 **Known limitation:** `saveSpots()` resolves each spot's `City` from the LLM's own per-spot `city` field, not from the requested `city` — so a nearby-but-administratively-distinct landmark (e.g. Lisbon's Cristo Rei, across the river in Almada) can get filed under a different `DestinationCity` than the one requested. Confirmed in testing: this doesn't affect what a consumer sees (TBS's `spotSourcing.js` overwrites `City` to the requested destination string on its side regardless), but it means the DB-first check in `sourceSpotsForCity()` can slightly undercount a city's existing pool, occasionally triggering an LLM top-up call that wasn't strictly necessary. Minor inefficiency, not a correctness bug — not worth the complexity of a geographic-radius lookup to fully close.

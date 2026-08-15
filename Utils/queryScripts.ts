@@ -60,6 +60,7 @@ const NLU_FIELD_DEFINITIONS: Record<string, string> = {
     transportMode: '"transportMode": "walking" or "public_transit" or "taxi" or "driving" or null   // how the traveler plans to get around the destination; null if not mentioned',
     arrivalPoint: '"arrivalPoint": string or null   // the named place (airport, train station, port, etc.) the traveler said they\'re arriving at/through/via; null if none is mentioned',
     departurePoint: '"departurePoint": string or null   // the named place (airport, train station, port, etc.) the traveler said they\'re departing from/via at the end of the trip; null if none is mentioned',
+    startDate: '"startDate": string (YYYY-MM-DD) or null   // the date the trip is planned to start, resolved to an absolute YYYY-MM-DD date even if the traveler gave a relative expression (e.g. "next Friday", "in two weeks") — use Today\'s date below as the anchor for resolving it; null if not mentioned',
     yesno: '"yesno": "yes" or "no" or null   // whether the traveler answered affirmatively or negatively; null if unclear',
     dayNumber: '"dayNumber": number or null   // the 1-based day number (Day 1, Day 2, etc.) the traveler is referring to; null if not mentioned',
     targetSpotHint: '"targetSpotHint": string or null   // a short description of which spot on that day the traveler wants replaced — its name, or a description like "the museum" or "the second stop"; null if not mentioned',
@@ -72,6 +73,10 @@ export function buildNluExtractionQuery(message: string, fields: string[], conte
         .filter(Boolean)
         .join(',\n  ');
     const contextLine = context ? `\nContext: ${context}` : '';
+    // Only startDate needs an anchor date to resolve relative expressions —
+    // every other field vocabulary is prompt content the traveler already
+    // stated in absolute terms, so this line is omitted unless requested.
+    const todayLine = fields.includes('startDate') ? `\nToday's date: ${new Date().toISOString().slice(0, 10)}` : '';
 
     return `Extract the following fields from a traveler's chat message. Respond with ONLY a single JSON object (no markdown fences, no commentary) matching exactly this shape:
 
@@ -79,7 +84,7 @@ export function buildNluExtractionQuery(message: string, fields: string[], conte
   ${fieldLines}
 }
 
-Message: "${message}"${contextLine}
+Message: "${message}"${contextLine}${todayLine}
 
 Use null for any field that genuinely isn't present or determinable from the message — do not guess.`;
 }

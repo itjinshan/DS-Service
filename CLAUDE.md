@@ -225,7 +225,7 @@ Narrow, structured field extraction from a single chat message — replaces rege
 | `token` | string | yes | JWT, see Auth above |
 | `ds` | string | yes | data source selector: `"deepseek"` (implemented) or `"chatgpt"` (not implemented) |
 | `message` | string | yes | the traveler's chat message to extract fields from |
-| `fields` | string[] | yes | which fields to extract — must each be one of `destination`, `duration`, `numOfTravelers`, `budget`, `pace`, `transportMode`, `arrivalPoint`, `departurePoint`, `yesno`, `dayNumber`, `targetSpotHint`, `replacementCategory` |
+| `fields` | string[] | yes | which fields to extract — must each be one of `destination`, `duration`, `numOfTravelers`, `budget`, `pace`, `transportMode`, `arrivalPoint`, `departurePoint`, `startDate`, `yesno`, `dayNumber`, `targetSpotHint`, `replacementCategory` |
 | `context` | string | no | optional freeform hint about what's being asked, e.g. "whether the traveler already has accommodation booked" — most useful for `yesno`, which otherwise has no way to know what a bare "yes"/"no" is answering |
 
 - `400` plain text `"Missing required field: message"` if `message` is absent.
@@ -243,7 +243,7 @@ Narrow, structured field extraction from a single chat message — replaces rege
   }
 }
 ```
-Only the fields listed in the request's `fields` array are present in `extracted` — e.g. requesting `["destination"]` returns `{ extracted: { destination: "Tokyo" } }` or `{ extracted: { destination: null } }`, never the other eleven fields. `dayNumber`/`targetSpotHint`/`replacementCategory` are for parsing an itinerary-edit instruction against an *existing* itinerary (e.g. "swap day 2's museum for something more outdoorsy") — added for TBS's Itinerary-page refinement chatbot (see TBS's `CLAUDE.md`); `replacementCategory`'s vocabulary matches `DestinationSpot`'s `Category` field above.
+Only the fields listed in the request's `fields` array are present in `extracted` — e.g. requesting `["destination"]` returns `{ extracted: { destination: "Tokyo" } }` or `{ extracted: { destination: null } }`, never the other eleven fields. `dayNumber`/`targetSpotHint`/`replacementCategory` are for parsing an itinerary-edit instruction against an *existing* itinerary (e.g. "swap day 2's museum for something more outdoorsy") — added for TBS's Itinerary-page refinement chatbot (see TBS's `CLAUDE.md`); `replacementCategory`'s vocabulary matches `DestinationSpot`'s `Category` field above. `startDate` is resolved to an absolute `YYYY-MM-DD` string even from a relative expression ("next Friday", "in two weeks") — whenever it's requested, `buildNluExtractionQuery()` appends a `Today's date: <YYYY-MM-DD>` line to the prompt as the anchor the LLM resolves it against; no other field needs this, so the line is otherwise omitted — added for TBS's profile-page trip history (see TBS's `CLAUDE.md`'s "Pending Tasks" section, "Build a profile management page"), which needs a trip's start date to sort it as past vs. upcoming.
 
 ## Pending Tasks
 

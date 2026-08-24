@@ -33,6 +33,11 @@ export interface IFees {
 
 export interface ITimeOfDayWindow {
     Description: string;
+    // Chinese counterpart of Description, sourced in the same LLM call (see
+    // Utils/queryScripts.ts's DESTINATION_SPOT_QUERY) — not a separate
+    // translation pass. Optional since spots sourced before this field
+    // existed won't have it; consumers fall back to Description.
+    DescriptionZh?: string;
     StartTime?: string;
     EndTime?: string;
 }
@@ -44,13 +49,20 @@ export interface ISeasonWindow {
 
 export interface IVisitDuration {
     Description: string;
+    DescriptionZh?: string;
     MinMinutes?: number;
     MaxMinutes?: number;
 }
 
 export interface IDestinationSpot extends Document {
     SpotName: string;
+    // Bilingual fields for the traveler-facing text this app actually
+    // displays (TBS's Itinerary.js spot cards) — see CLAUDE.md's Backlog,
+    // "Default trip intake to Chinese for the China-first launch". Sourced
+    // together in one LLM call, not backfilled onto spots sourced earlier.
+    SpotNameZh?: string;
     StreetAddress: string;
+    StreetAddressZh?: string;
     City: Types.ObjectId;
     StateOrProvince: string;
     Country: string;
@@ -76,6 +88,7 @@ const FeesSchema = new Schema<IFees>({
 
 const TimeOfDayWindowSchema = new Schema<ITimeOfDayWindow>({
     Description: { type: String, required: true },
+    DescriptionZh: { type: String },
     StartTime: { type: String },
     EndTime: { type: String }
 }, { _id: false });
@@ -87,6 +100,7 @@ const SeasonWindowSchema = new Schema<ISeasonWindow>({
 
 const VisitDurationSchema = new Schema<IVisitDuration>({
     Description: { type: String, required: true },
+    DescriptionZh: { type: String },
     MinMinutes: { type: Number },
     MaxMinutes: { type: Number }
 }, { _id: false });
@@ -96,9 +110,15 @@ const DestinationSpotSchema = new Schema<IDestinationSpot>({
         type: String,
         required: true
     },
+    SpotNameZh: {
+        type: String
+    },
     StreetAddress: {
         type: String,
         required: true
+    },
+    StreetAddressZh: {
+        type: String
     },
     City: {
         type: Schema.Types.ObjectId,

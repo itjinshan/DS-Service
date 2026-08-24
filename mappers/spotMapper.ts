@@ -27,6 +27,7 @@ interface RawFees {
 
 interface RawTimeOfDayWindow {
     description: string;
+    descriptionZh?: string | null;
     startTime?: string | null;
     endTime?: string | null;
 }
@@ -38,13 +39,16 @@ interface RawSeasonWindow {
 
 interface RawVisitDuration {
     description: string;
+    descriptionZh?: string | null;
     minMinutes?: number | null;
     maxMinutes?: number | null;
 }
 
 export interface RawSpot {
     name: string;
+    nameZh?: string | null;
     streetAddress: string;
+    streetAddressZh?: string | null;
     city: string;
     stateOrProvince: string;
     country: string;
@@ -81,7 +85,9 @@ export async function saveSpots(rawSpots: RawSpot[]): Promise<IDestinationSpot[]
         const city = await findOrCreateCity(raw.city, raw.country);
         const spot = await DestinationSpot.create({
             SpotName: raw.name,
+            SpotNameZh: raw.nameZh ?? undefined,
             StreetAddress: raw.streetAddress,
+            StreetAddressZh: raw.streetAddressZh ?? undefined,
             City: city._id,
             StateOrProvince: raw.stateOrProvince,
             Country: raw.country,
@@ -89,6 +95,7 @@ export async function saveSpots(rawSpots: RawSpot[]): Promise<IDestinationSpot[]
             Longitude: raw.longitude,
             BestTimeToVisitInDay: {
                 Description: raw.bestTimeToVisitInDay?.description,
+                DescriptionZh: raw.bestTimeToVisitInDay?.descriptionZh ?? undefined,
                 StartTime: raw.bestTimeToVisitInDay?.startTime ?? undefined,
                 EndTime: raw.bestTimeToVisitInDay?.endTime ?? undefined
             },
@@ -98,6 +105,7 @@ export async function saveSpots(rawSpots: RawSpot[]): Promise<IDestinationSpot[]
             },
             AverageTimeSpent: {
                 Description: raw.averageTimeSpent?.description,
+                DescriptionZh: raw.averageTimeSpent?.descriptionZh ?? undefined,
                 MinMinutes: raw.averageTimeSpent?.minMinutes ?? undefined,
                 MaxMinutes: raw.averageTimeSpent?.maxMinutes ?? undefined
             },
